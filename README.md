@@ -51,6 +51,8 @@ Top fixes:
 
 ## Install (one line)
 
+**Requires Claude Code.**
+
 ```bash
 curl -fsSL https://pqs.onchainintel.net/install.sh | bash
 ```
