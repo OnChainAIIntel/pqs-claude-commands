@@ -85,12 +85,66 @@ The command reads your key from `~/.pqs/config`, POSTs the prompt to
 format, role definition, examples, CoT structure), and three actionable fixes
 from the response.
 
+## Commands
+
+This repo ships three Claude Code slash commands. All three read your API key
+from `~/.pqs/config` and talk to `https://pqs.onchainintel.net`.
+
+### `/pqs-score <prompt>`
+
+Scores a single prompt and prints the grade, 8-dimension breakdown, and three
+actionable top fixes — documented in the **Example output** and **Usage**
+sections above.
+
+### `/pqs-optimize <prompt>`
+
+One-shot prompt rewriter gated on the score.
+
+1. Scores the prompt.
+2. If the score is already `≥ 60/80`, prints
+   `Your prompt is already strong (Score: X/80). No optimization needed.` and
+   exits — no rewrite.
+3. Otherwise, rewrites the prompt using the PQS dimension breakdown and the
+   `top_fixes` returned by the API — addressing each fix and strengthening the
+   lowest-scoring dimensions (role, output format, examples, CoT, etc).
+4. Re-scores the rewritten prompt.
+5. Prints the original score, the improved prompt, the new score, and the
+   delta. If the rewrite still lands below 60, it says so honestly and points
+   you at `/pqs-score` for a full dimension breakdown.
+
+```
+/pqs-optimize write a haiku about postgres
+```
+
+Does exactly one optimization pass — it won't loop.
+
+### `/pqs-batch <path/to/prompts.txt>`
+
+Bulk-scores a file of prompts (one prompt per line, blank lines skipped).
+
+- Calls `/api/score` sequentially with a 500 ms pause between requests for
+  rate-limit protection.
+- Prints a results table (`# | prompt (truncated to 60 chars) | score | grade`).
+- Prints aggregate metrics: total scored, average score, grade distribution
+  (A/B/C/D/F), highest scorer, lowest scorer.
+- Writes a full (non-truncated) results file to `pqs-batch-results.md` in the
+  current working directory, including an `## Errors` section if any
+  individual request failed.
+- 401/402 errors abort the whole batch; transient 4xx/5xx errors for a single
+  prompt are recorded as error rows and the batch continues.
+
+```
+/pqs-batch ./my-prompts.txt
+```
+
 ## What's in this repo
 
 ```
-install.sh                       — the installer
-.claude/commands/pqs-score.md    — the slash command itself
-README.md                        — this file
+install.sh                         — the installer
+.claude/commands/pqs-score.md      — score one prompt
+.claude/commands/pqs-optimize.md   — score + rewrite if below 60
+.claude/commands/pqs-batch.md      — bulk-score a file of prompts
+README.md                          — this file
 ```
 
 ## Privacy
