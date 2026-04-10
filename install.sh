@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PQS /pqs-score installer
+# PQS slash-command installer
 # Usage: curl -fsSL https://pqs.onchainintel.net/install.sh | bash
 #
 # What this does:
@@ -7,8 +7,11 @@
 #   2. Calls POST https://pqs.onchainintel.net/api/keys/generate to mint
 #      (or recover) a PQS_ API key tied to that fingerprint.
 #   3. Writes the key to ~/.pqs/config in KEY=VALUE format (mode 600).
-#   4. Optionally copies the /pqs-score slash command into ~/.claude/commands
-#      if Claude Code is installed.
+#   4. Optionally copies all PQS slash commands into ~/.claude/commands if
+#      Claude Code is installed:
+#        /pqs-score    — single prompt, 8-dimension score + top fixes
+#        /pqs-optimize — score + rewrite if below 60/80, then re-score
+#        /pqs-batch    — bulk-score a file of prompts, writes results.md
 #
 # Re-running on the same machine returns the same key (idempotent server-side).
 
@@ -88,46 +91,72 @@ chmod 600 "$CONFIG_FILE"
 
 say "[pqs] wrote $CONFIG_FILE (chmod 600)"
 
-# --- optional: install slash command for Claude Code -------------------------
+# --- optional: install slash commands for Claude Code ------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo .)"
-LOCAL_CMD="${SCRIPT_DIR}/.claude/commands/pqs-score.md"
 
-CMD_INSTALLED=0
-install_cmd() {
-  mkdir -p "$CLAUDE_CMD_DIR"
-  if [ -f "$LOCAL_CMD" ]; then
-    cp "$LOCAL_CMD" "${CLAUDE_CMD_DIR}/pqs-score.md"
-    say "[pqs] installed /pqs-score from local checkout"
-    CMD_INSTALLED=1
+# Every slash command shipped by this repo. To add another, append the basename
+# (without .md) to this list — no other changes required.
+PQS_COMMANDS=(pqs-score pqs-optimize pqs-batch)
+
+CMD_INSTALLED_COUNT=0
+CMD_FAILED_COUNT=0
+CMD_FAILED_NAMES=()
+
+install_one_cmd() {
+  local name="$1"
+  local local_src="${SCRIPT_DIR}/.claude/commands/${name}.md"
+  local dest="${CLAUDE_CMD_DIR}/${name}.md"
+
+  if [ -f "$local_src" ]; then
+    cp "$local_src" "$dest"
+    say "[pqs] installed /${name} from local checkout"
+    CMD_INSTALLED_COUNT=$((CMD_INSTALLED_COUNT + 1))
     return 0
   fi
-  if curl -fsSL "${API_BASE}/pqs-score.md" -o "${CLAUDE_CMD_DIR}/pqs-score.md" 2>/dev/null; then
-    say "[pqs] installed /pqs-score from ${API_BASE}/pqs-score.md"
-    CMD_INSTALLED=1
+  if curl -fsSL "${API_BASE}/${name}.md" -o "$dest" 2>/dev/null; then
+    say "[pqs] installed /${name} from ${API_BASE}/${name}.md"
+    CMD_INSTALLED_COUNT=$((CMD_INSTALLED_COUNT + 1))
     return 0
   fi
-  say "[pqs] skipped slash command install (could not fetch pqs-score.md)"
+  say "[pqs] skipped /${name} (could not fetch ${name}.md)"
+  CMD_FAILED_COUNT=$((CMD_FAILED_COUNT + 1))
+  CMD_FAILED_NAMES+=("$name")
   return 0
 }
-install_cmd || true
+
+install_cmds() {
+  mkdir -p "$CLAUDE_CMD_DIR"
+  for cmd in "${PQS_COMMANDS[@]}"; do
+    install_one_cmd "$cmd" || true
+  done
+}
+install_cmds || true
 
 say ""
 say "  done. your key is in ~/.pqs/config"
 
-if [ "$CMD_INSTALLED" = "1" ]; then
+if [ "$CMD_INSTALLED_COUNT" -gt 0 ]; then
+  say ""
+  say "  installed ${CMD_INSTALLED_COUNT} slash command(s) into ${CLAUDE_CMD_DIR}/"
   say ""
   say "  IMPORTANT: if Claude Code is already running, quit and relaunch it."
-  say "  Claude Code scans ~/.claude/commands/ once at startup and caches"
-  say "  the index for the life of the session, so the freshly-installed"
-  say "  /pqs-score command will show up as 'Unknown skill' in any session"
-  say "  that was already running when this installer fired."
+  say "  Claude Code scans ~/.claude/commands/ once at startup and caches the"
+  say "  index for the life of the session, so freshly-installed commands will"
+  say "  show up as 'Unknown skill' in any session that was already running"
+  say "  when this installer fired."
   say ""
-  say "  After restart, try:  /pqs-score write me a haiku about postgres"
-else
+  say "  After restart, try:"
+  say "    /pqs-score    write me a haiku about postgres"
+  say "    /pqs-optimize write me a haiku about postgres"
+  say "    /pqs-batch    ./my-prompts.txt"
+fi
+
+if [ "$CMD_FAILED_COUNT" -gt 0 ]; then
   say ""
-  say "  Slash command was not copied into ${CLAUDE_CMD_DIR}/."
-  say "  If you want to use /pqs-score inside Claude Code, either re-run"
-  say "  this installer from a local checkout of pqs-claude-commands, or"
-  say "  fetch the file manually:"
-  say "    curl -fsSL ${API_BASE}/pqs-score.md -o ${CLAUDE_CMD_DIR}/pqs-score.md"
+  say "  ${CMD_FAILED_COUNT} command(s) were NOT installed: ${CMD_FAILED_NAMES[*]}"
+  say "  To fetch them manually, either re-run this installer from a local"
+  say "  checkout of pqs-claude-commands, or grab each file directly:"
+  for name in "${CMD_FAILED_NAMES[@]}"; do
+    say "    curl -fsSL ${API_BASE}/${name}.md -o ${CLAUDE_CMD_DIR}/${name}.md"
+  done
 fi
