@@ -92,22 +92,42 @@ say "[pqs] wrote $CONFIG_FILE (chmod 600)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo .)"
 LOCAL_CMD="${SCRIPT_DIR}/.claude/commands/pqs-score.md"
 
+CMD_INSTALLED=0
 install_cmd() {
   mkdir -p "$CLAUDE_CMD_DIR"
   if [ -f "$LOCAL_CMD" ]; then
     cp "$LOCAL_CMD" "${CLAUDE_CMD_DIR}/pqs-score.md"
     say "[pqs] installed /pqs-score from local checkout"
-  else
-    if curl -fsSL "${API_BASE}/pqs-score.md" -o "${CLAUDE_CMD_DIR}/pqs-score.md" 2>/dev/null; then
-      say "[pqs] installed /pqs-score from ${API_BASE}/pqs-score.md"
-    else
-      say "[pqs] skipped slash command install (could not fetch pqs-score.md)"
-      return 0
-    fi
+    CMD_INSTALLED=1
+    return 0
   fi
+  if curl -fsSL "${API_BASE}/pqs-score.md" -o "${CLAUDE_CMD_DIR}/pqs-score.md" 2>/dev/null; then
+    say "[pqs] installed /pqs-score from ${API_BASE}/pqs-score.md"
+    CMD_INSTALLED=1
+    return 0
+  fi
+  say "[pqs] skipped slash command install (could not fetch pqs-score.md)"
+  return 0
 }
 install_cmd || true
 
 say ""
 say "  done. your key is in ~/.pqs/config"
-say "  try it in Claude Code:  /pqs-score write me a haiku about postgres"
+
+if [ "$CMD_INSTALLED" = "1" ]; then
+  say ""
+  say "  IMPORTANT: if Claude Code is already running, quit and relaunch it."
+  say "  Claude Code scans ~/.claude/commands/ once at startup and caches"
+  say "  the index for the life of the session, so the freshly-installed"
+  say "  /pqs-score command will show up as 'Unknown skill' in any session"
+  say "  that was already running when this installer fired."
+  say ""
+  say "  After restart, try:  /pqs-score write me a haiku about postgres"
+else
+  say ""
+  say "  Slash command was not copied into ${CLAUDE_CMD_DIR}/."
+  say "  If you want to use /pqs-score inside Claude Code, either re-run"
+  say "  this installer from a local checkout of pqs-claude-commands, or"
+  say "  fetch the file manually:"
+  say "    curl -fsSL ${API_BASE}/pqs-score.md -o ${CLAUDE_CMD_DIR}/pqs-score.md"
+fi
