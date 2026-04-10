@@ -10,10 +10,21 @@ right from your terminal.
 
 ## Example output
 
-This is an actual `/pqs-score` run from inside Claude Code — not a curl
-mock-up, not aspirational copy. The slash command read the API key from
-`~/.pqs/config`, POSTed the prompt to `pqs.onchainintel.net/api/score`, and
-rendered the response:
+This is an actual `/pqs-score` run from inside Claude Code — the slash command
+read the API key from `~/.pqs/config`, POSTed the prompt to
+`pqs.onchainintel.net/api/score`, and rendered the response:
+
+![/pqs-score write me a haiku about postgres — 34/80 Grade C, 8-dimension breakdown with ASCII bars, 3 actionable top fixes](docs/pqs-score-demo.png)
+
+"Write a haiku about postgres" lands at a C — clear enough that the model will
+respond, but wide open on the dimensions that actually determine output quality:
+no tone, no angle on what's interesting about Postgres, no role, no reasoning
+scaffold. Every run will give you a different haiku, because the prompt isn't
+telling the model what "good" looks like. PQS surfaces those gaps in under a
+second, before you waste the inference call.
+
+<details>
+<summary>Raw text version of the same output (for copy-paste)</summary>
 
 ```
 ─────────────────────────────────────
@@ -36,12 +47,7 @@ Top fixes:
 ─────────────────────────────────────
 ```
 
-"Write a haiku about postgres" lands at a C — clear enough that the model will
-respond, but wide open on the dimensions that actually determine output quality:
-no tone, no angle on what's interesting about Postgres, no role, no reasoning
-scaffold. Every run will give you a different haiku, because the prompt isn't
-telling the model what "good" looks like. PQS surfaces those gaps in under a
-second, before you waste the inference call.
+</details>
 
 ## Install (one line)
 
