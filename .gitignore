@@ -1,0 +1,6 @@
+# macOS Finder metadata
+.DS_Store
+
+# Claude Code local session state (contains absolute paths / approvals)
+.claude/settings.local.json
+.claude/settings.json
