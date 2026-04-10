@@ -1,11 +1,11 @@
 ---
-description: Score a prompt with PQS (Prompt Quality Score) via the public HTTP API
+description: Pre-flight prompt quality check via PQS — 8-dimension score + 3 actionable fixes
 argument-hint: <prompt text>
 ---
 
-You are running the `/pqs-score` command. The user wants you to score the prompt text in `$ARGUMENTS` against the public PQS HTTP API and print the result in a compact, readable format.
+You are running the `/pqs-score` command. The user wants you to score the prompt text in `$ARGUMENTS` against the public PQS HTTP API and display the result in a compact, readable format.
 
-Do the following steps in order. Do not skip any.
+Follow these steps in order. Do not skip any.
 
 ## 1. Load the API key from `~/.pqs/config`
 
@@ -58,54 +58,72 @@ Important:
 ## 4. Handle the response
 
 - HTTP 401 → print: `Invalid or expired PQS API key. Re-run install.sh to refresh it.` and stop.
-- HTTP 402 → print: `This endpoint now requires x402 payment. Your free-tier key was not accepted.` and stop. (Shouldn't happen for the free Bearer path, but handle it.)
+- HTTP 402 → print: `This endpoint now requires x402 payment. Your free-tier key was not accepted.` and stop.
 - HTTP 4xx (any other) → print the `error` field from the JSON body and stop.
 - HTTP 5xx → print: `PQS server error — try again in a moment.` and stop.
 - HTTP 200 → continue.
 
-## 5. Display the result
-
-The 200 response shape (from the existing `/api/score` route):
+The 200 response shape (PQS v2.0):
 
 ```json
 {
-  "pqs_version": "1.0",
+  "pqs_version": "2.0",
   "prompt": "...",
   "vertical": "general",
   "score": {
-    "total": 28,
-    "out_of": 40,
-    "grade": "B",
-    "percentile": 70,
+    "total": 18,
+    "out_of": 80,
+    "grade": "D",
+    "percentile": 23,
     "dimensions": {
-      "specificity": 7,
-      "context": 6,
-      "clarity": 8,
-      "predictability": 7
+      "clarity": 6,
+      "specificity": 3,
+      "context": 2,
+      "constraints": 1,
+      "output_format": 2,
+      "role_definition": 1,
+      "examples": 2,
+      "cot_structure": 1
     }
   },
-  "summary": "One sentence on the biggest weakness.",
+  "top_fixes": [
+    "...",
+    "...",
+    "..."
+  ],
   "upgrade": "...",
-  "powered_by": "PQS — pqs.onchainintel.net"
+  "powered_by": "..."
 }
 ```
 
-Print this plain-text summary (no markdown tables, no extra commentary):
+## 5. Display the result
+
+Print this exact layout. **All dimensions must be rendered as a 10-character ASCII bar**: fill `█` for each point of the score and `░` for each point remaining. Example: `6/10` → `██████░░░░`.
 
 ```
-PQS  Grade: <score.grade>   Score: <score.total>/<score.out_of>   Percentile: <score.percentile>
-     Vertical: <vertical>
-
+─────────────────────────────────────
+PQS SCORE: <total>/<out_of> — Grade <grade> (<percentile>th percentile)
+─────────────────────────────────────
 Dimensions:
-  specificity:    <score.dimensions.specificity>/10
-  context:        <score.dimensions.context>/10
-  clarity:        <score.dimensions.clarity>/10
-  predictability: <score.dimensions.predictability>/10
+  Clarity          <bar>  <clarity>/10
+  Specificity      <bar>  <specificity>/10
+  Context          <bar>  <context>/10
+  Constraints      <bar>  <constraints>/10
+  Output Format    <bar>  <output_format>/10
+  Role Definition  <bar>  <role_definition>/10
+  Examples         <bar>  <examples>/10
+  CoT Structure    <bar>  <cot_structure>/10
 
-Biggest weakness:
-  <summary>
+Top fixes:
+  → <top_fixes[0]>
+  → <top_fixes[1]>
+  → <top_fixes[2]>
+─────────────────────────────────────
 ```
 
 Rules:
-- If any field is missing or `null`, print `—` in its place rather than fabricating a value.
-- Stop after printing the summary. Do not add tips, follow-up questions, or meta-commentary.
+- Render dimensions in the exact order shown above (not whatever order the API returns).
+- Pad dimension labels so the bars align (label column is 17 characters wide including the 2-space indent).
+- If `top_fixes` has fewer than 3 items, print only what exists. If it's empty, omit the "Top fixes:" block entirely.
+- If any numeric field is missing or null, render `—` in its place rather than fabricating a value.
+- Stop after printing the block. Do not add tips, commentary, follow-up questions, or a summary of what you just did.

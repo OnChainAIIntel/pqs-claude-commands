@@ -1,8 +1,43 @@
 # pqs-claude-commands
 
+> **Your prompts are failing before you hit enter. You just can't see it yet.**
+>
+> `/pqs-score` runs a pre-flight quality check on any prompt — right from Claude Code — before you waste an inference call on a bad input.
+
 Public giveaway repo for the **`/pqs-score`** Claude Code slash command — score
 any prompt against [PQS (Prompt Quality Score)](https://pqs.onchainintel.net)
 right from your terminal.
+
+## Example output
+
+Real output from `/pqs-score write a haiku about postgres` against the live
+`pqs.onchainintel.net/api/score` endpoint:
+
+```
+─────────────────────────────────────
+PQS SCORE: 31/80 — Grade D (39th percentile)
+─────────────────────────────────────
+Dimensions:
+  Clarity          ████████░░  8/10
+  Specificity      ████░░░░░░  4/10
+  Context          ██████░░░░  6/10
+  Constraints      ███░░░░░░░  3/10
+  Output Format    ███████░░░  7/10
+  Role Definition  █░░░░░░░░░  1/10
+  Examples         █░░░░░░░░░  1/10
+  CoT Structure    █░░░░░░░░░  1/10
+
+Top fixes:
+  → Specify the tone or perspective for the haiku (technical, humorous, appreciative)
+  → Define any constraints on vocabulary level or technical depth
+  → Request explanation of haiku structure or creative choices
+─────────────────────────────────────
+```
+
+"Write a haiku about postgres" is a D-grade prompt. The model can still respond
+to it, but the response will vary wildly between runs because the prompt gives
+it nothing to anchor on: no tone, no audience, no constraints, no format hint.
+PQS surfaces that before you ship the call.
 
 ## Install (one line)
 
@@ -33,9 +68,10 @@ Inside any Claude Code session:
 
 The command reads your key from `~/.pqs/config`, POSTs the prompt to
 `https://pqs.onchainintel.net/api/score` with the
-`Authorization: Bearer <key>` header, and prints grade, score, percentile,
-dimension breakdown (specificity, context, clarity, predictability), and the
-biggest-weakness summary from the response.
+`Authorization: Bearer <key>` header, and prints grade, score, percentile, an
+8-dimension breakdown (clarity, specificity, context, constraints, output
+format, role definition, examples, CoT structure), and three actionable fixes
+from the response.
 
 ## What's in this repo
 
