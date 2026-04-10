@@ -10,12 +10,14 @@ right from your terminal.
 
 ## Example output
 
-Real output from `/pqs-score write a haiku about postgres` against the live
-`pqs.onchainintel.net/api/score` endpoint:
+This is an actual `/pqs-score` run from inside Claude Code — not a curl
+mock-up, not aspirational copy. The slash command read the API key from
+`~/.pqs/config`, POSTed the prompt to `pqs.onchainintel.net/api/score`, and
+rendered the response:
 
 ```
 ─────────────────────────────────────
-PQS SCORE: 31/80 — Grade D (39th percentile)
+PQS SCORE: 34/80 — Grade C (43rd percentile)
 ─────────────────────────────────────
 Dimensions:
   Clarity          ████████░░  8/10
@@ -23,21 +25,23 @@ Dimensions:
   Context          ██████░░░░  6/10
   Constraints      ███░░░░░░░  3/10
   Output Format    ███████░░░  7/10
-  Role Definition  █░░░░░░░░░  1/10
-  Examples         █░░░░░░░░░  1/10
-  CoT Structure    █░░░░░░░░░  1/10
+  Role Definition  ██░░░░░░░░  2/10
+  Examples         ██░░░░░░░░  2/10
+  CoT Structure    ██░░░░░░░░  2/10
 
 Top fixes:
-  → Specify the tone or perspective for the haiku (technical, humorous, appreciative)
-  → Define any constraints on vocabulary level or technical depth
-  → Request explanation of haiku structure or creative choices
+  → Specify the tone or mood for the haiku (playful, technical, reverent)
+  → Define specific PostgreSQL aspects to focus on (performance, reliability, features)
+  → Request explanation of haiku structure or reasoning process
 ─────────────────────────────────────
 ```
 
-"Write a haiku about postgres" is a D-grade prompt. The model can still respond
-to it, but the response will vary wildly between runs because the prompt gives
-it nothing to anchor on: no tone, no audience, no constraints, no format hint.
-PQS surfaces that before you ship the call.
+"Write a haiku about postgres" lands at a C — clear enough that the model will
+respond, but wide open on the dimensions that actually determine output quality:
+no tone, no angle on what's interesting about Postgres, no role, no reasoning
+scaffold. Every run will give you a different haiku, because the prompt isn't
+telling the model what "good" looks like. PQS surfaces those gaps in under a
+second, before you waste the inference call.
 
 ## Install (one line)
 
